@@ -33,15 +33,15 @@ jobs:
       # belum terpublish ("No service published for: input") dan seluruh job
       # gagal. Gerbang kesiapan di bawah menunggu boot_completed DAN layanan
       # input/settings benar-benar aktif sebelum lanjut.
-      - name: Buat & boot emulator (gerbang render + layanan sistem)
+      - name: Buat & boot emulator (gerbang layanan sistem)
         run: |
           # sdkmanager/avdmanager tidak ada di PATH default runner — tambahkan.
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
-          # avdmanager & emulator lama menulis/membaca AVD di lokasi berbeda
+          # avdmanager & emulator menulis/membaca AVD di lokasi berbeda
           # (asimetri XDG) -> pin eksplisit agar konsisten.
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           export ANDROID_USER_HOME="$HOME/.android"
-          mkdir -p "$ANDROID_AVD_HOME" /tmp/diag
+          mkdir -p "$ANDROID_AVD_HOME"
           # Image runner 26.04 tidak memberi akses /dev/kvm ke user runner.
           ACCEL=""
           if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
@@ -55,85 +55,34 @@ jobs:
               ACCEL="-accel off"
             fi
           fi
-
-          # Kombinasi (binary|flags) dicoba berurutan. Latar belakang: screencap
-          # solid hitam murni di semua image/mode yang dicoba; kandidat kuat:
-          # layar belum ON di emulator headless, atau backend render tertentu
-          # gagal komposisi. Kesemuanya diuji dengan verifikasi visual Settings.
-          DEFAULT_IMG="system-images;android-30;aosp_atd;x86_64"
-          COMBOS=(
-            "emulator|"
-            "emulator|-gpu angle_indirect"
-            "emulator|-gpu swiftshader_indirect"
-            "emulator-headless|-gpu swiftshader_indirect"
-          )
-
-          sdkmanager --install "$DEFAULT_IMG" > /dev/null
-          echo no | avdmanager create avd --force -n test --device pixel --package "$DEFAULT_IMG"
+          # E2E tidak butuh render piksel (test semantik) -> image ATD cukup
+          # dan lebih cepat; tanpa gerbang render.
+          sdkmanager --install "system-images;android-30;aosp_atd;x86_64" > /dev/null
+          echo no | avdmanager create avd --force -n test --device pixel \
+            --package 'system-images;android-30;aosp_atd;x86_64'
           test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan"; exit 1; }
-
-          boot_and_check() {
-            local binname="$1"
-            local flags="$2"
-            local emubin="$ANDROID_HOME/emulator/$binname"
-            [ -x "$emubin" ] || { echo "Binary $binname tidak ada — lewati."; return 1; }
-            "$emubin" -avd test -no-window -noaudio -no-boot-anim -no-snapshot \
-              $ACCEL $flags > /tmp/emulator.log 2>&1 &
-            EMU_PID=$!
-            local deadline=$((SECONDS + 420))
-            while [ $SECONDS -lt $deadline ]; do
-              if ! kill -0 "$EMU_PID" 2>/dev/null; then
-                echo "Emulator mati lebih awal ($binname '$flags') — log:"; tail -20 /tmp/emulator.log
-                return 1
-              fi
-              local boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-              if [ "$boot" = "1" ] \
-                 && adb shell service check input 2>/dev/null | tr -d '\r' | grep -q ': found' \
-                 && adb shell service check settings 2>/dev/null | tr -d '\r' | grep -q ': found'; then
-                # Pastikan layar benar-benar ON (bukan sekadar keyguard dibuka).
-                adb shell input keyevent KEYCODE_WAKEUP || true
-                adb shell svc power stayon true || true
-                adb shell wm dismiss-keyguard || true
-                sleep 3
-                adb shell dumpsys power | grep -E "mWakefulness=|Display Power|mHoldingDisplay" > /tmp/diag/power.txt 2>&1 || true
-                echo "--- power state ---"; cat /tmp/diag/power.txt | head -6
-                adb exec-out screencap -p > /tmp/diag/boot-screen.png || true
-                # Uji render menentukan: foreground-kan Settings (UI berwarna).
-                adb shell am start -a android.settings.SETTINGS > /tmp/diag/am-start.txt 2>&1 || true
-                echo "--- am start ---"; head -3 /tmp/diag/am-start.txt
-                sleep 6
-                adb shell dumpsys activity activities | grep -E "topResumedActivity|ResumedActivity" > /tmp/diag/top-activity.txt 2>&1 || true
-                echo "--- top activity ---"; head -3 /tmp/diag/top-activity.txt
-                adb exec-out screencap -p > /tmp/diag/settings-screen.png || true
-                adb logcat -d > /tmp/diag/logcat-full.txt 2>&1 || true
-                adb shell dumpsys SurfaceFlinger > /tmp/diag/sf-full.txt 2>&1 || true
-                local size=$(stat -c%s /tmp/diag/settings-screen.png 2>/dev/null || echo 0)
-                if [ "$size" -gt 30000 ]; then
-                  echo "Render OK ($binname '$flags', Settings $size B) — emulator siap."
-                  return 0
-                fi
-                echo "Mode $binname '$flags': layar Settings solid ($size B) — coba berikutnya."
-                return 1
-              fi
-              sleep 5
-            done
-            echo "TIMEOUT boot ($binname '$flags') — log:"; tail -20 /tmp/emulator.log
-            return 1
-          }
-
-          RENDER_OK=0
-          for COMBO in "${COMBOS[@]}"; do
-            BINNAME="${COMBO%%|*}"
-            FLAGS="${COMBO#*|}"
-            if boot_and_check "$BINNAME" "$FLAGS"; then RENDER_OK=1; break; fi
-            kill "$EMU_PID" 2>/dev/null || true
-            wait "$EMU_PID" 2>/dev/null || true
-            sleep 3
+          "$ANDROID_HOME/emulator/emulator" -avd test -no-window -noaudio \
+            -no-boot-anim -no-snapshot $ACCEL -gpu swiftshader_indirect \
+            > /tmp/emulator.log 2>&1 &
+          EMU_PID=$!
+          deadline=$((SECONDS + 420))
+          while [ $SECONDS -lt $deadline ]; do
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "Emulator mati lebih awal — log:"; tail -40 /tmp/emulator.log; exit 1
+            fi
+            boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            if [ "$boot" = "1" ] \
+               && adb shell service check input 2>/dev/null | tr -d '\r' | grep -q ': found' \
+               && adb shell service check settings 2>/dev/null | tr -d '\r' | grep -q ': found'; then
+              echo "Emulator siap (boot_completed + layanan input/settings aktif)."
+              break
+            fi
+            sleep 5
           done
-          if [ "$RENDER_OK" != "1" ]; then
-            echo "Semua kombinasi binary/GPU gagal render — log terakhir:"; tail -50 /tmp/emulator.log
-            exit 1
+          if [ $SECONDS -ge $deadline ]; then
+            echo "TIMEOUT menunggu emulator — log:"; tail -40 /tmp/emulator.log; exit 1
           fi
+          adb shell input keyevent 82 || true   # buka keyguard bila ada
 
       # PENTING: JANGAN memasang APK manual! Instalasi manual terbukti konflik
       # dengan instalasi AGP/UTP (INSTALL_FAILED_UPDATE_INCOMPATIBLE, signature)

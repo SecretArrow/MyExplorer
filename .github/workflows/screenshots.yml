@@ -29,12 +29,10 @@ jobs:
       # e2e.yml (action pihak ketiga menjalankan `input keyevent 82` tanpa
       # retry tepat setelah boot_completed; pada boot lambat layanan `input`
       # belum terpublish dan job gagal).
-      - name: Buat & boot emulator (gerbang render + layanan sistem)
+      - name: Buat & boot emulator (gerbang render via Settings)
         run: |
           # sdkmanager/avdmanager tidak ada di PATH default runner — tambahkan.
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
-          # avdmanager & emulator lama menulis/membaca AVD di lokasi berbeda
-          # (asimetri XDG) -> pin eksplisit agar konsisten.
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           export ANDROID_USER_HOME="$HOME/.android"
           mkdir -p "$ANDROID_AVD_HOME" /tmp/diag
@@ -52,20 +50,20 @@ jobs:
             fi
           fi
 
-          # Kombinasi (binary|flags) dicoba berurutan. Latar belakang: screencap
-          # solid hitam murni di semua image/mode yang dicoba; kandidat kuat:
-          # layar belum ON di emulator headless, atau backend render tertentu
-          # gagal komposisi. Kesemuanya diuji dengan verifikasi visual Settings.
-          DEFAULT_IMG="system-images;android-30;aosp_atd;x86_64"
+          # Screenshot BUTUH render piksel sungguhan -> image google_apis
+          # lengkap (ATD terbukti tak punya Settings dan launcher-nya cuma
+          # EmptyHomeActivity yang memang hitam). Uji render: Settings app
+          # diforegroundkan, tangkapannya harus berisi konten (bukan solid).
+          # Kombinasi (binary|flags) dicoba berurutan sampai render OK.
+          IMG="system-images;android-30;google_apis;x86_64"
           COMBOS=(
             "emulator|"
             "emulator|-gpu angle_indirect"
             "emulator|-gpu swiftshader_indirect"
             "emulator-headless|-gpu swiftshader_indirect"
           )
-
-          sdkmanager --install "$DEFAULT_IMG" > /dev/null
-          echo no | avdmanager create avd --force -n test --device pixel --package "$DEFAULT_IMG"
+          sdkmanager --install "$IMG" > /dev/null
+          echo no | avdmanager create avd --force -n test --device pixel --package "$IMG"
           test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan"; exit 1; }
 
           boot_and_check() {
@@ -91,9 +89,7 @@ jobs:
                 adb shell svc power stayon true || true
                 adb shell wm dismiss-keyguard || true
                 sleep 3
-                adb shell dumpsys power | grep -E "mWakefulness=|Display Power|mHoldingDisplay" > /tmp/diag/power.txt 2>&1 || true
-                echo "--- power state ---"; cat /tmp/diag/power.txt | head -6
-                adb exec-out screencap -p > /tmp/diag/boot-screen.png || true
+                adb exec-out screencap -p > /tmp/diag/home-screen.png || true
                 # Uji render menentukan: foreground-kan Settings (UI berwarna).
                 adb shell am start -a android.settings.SETTINGS > /tmp/diag/am-start.txt 2>&1 || true
                 echo "--- am start ---"; head -3 /tmp/diag/am-start.txt
