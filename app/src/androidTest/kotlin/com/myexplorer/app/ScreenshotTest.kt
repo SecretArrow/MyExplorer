@@ -182,8 +182,9 @@ class ScreenshotTest {
         runCatching { composeRule.waitForIdle() }
         Thread.sleep(CAPTURE_SETTLE_MILLIS)
         val target = File(shotDir, "$name.png")
-        val fd = instrumentation.uiAutomation
-            .executeShellCommand("screencap -p ${target.absolutePath}")
+        val fd =
+            instrumentation.uiAutomation
+                .executeShellCommand("screencap -p ${target.absolutePath}")
         fd.use { descriptor ->
             ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { stream ->
                 val buffer = ByteArray(8192)
