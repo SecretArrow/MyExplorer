@@ -23,6 +23,8 @@
     <string name="browser_cd_paste">Tempel</string>
     <string name="browser_cd_selection_mode">Mode seleksi</string>
     <string name="browser_new_folder">Folder baru</string>
+    <string name="browser_fab_new">Baru</string>
+    <string name="browser_breadcrumb_truncated">…</string>
     <string name="browser_cd_refresh">Segarkan</string>
     <string name="browser_empty_folder">Folder kosong</string>
     <string name="browser_folder_name_label">Nama folder</string>

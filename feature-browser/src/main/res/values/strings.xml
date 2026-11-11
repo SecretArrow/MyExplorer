@@ -23,6 +23,8 @@
     <string name="browser_cd_paste">Paste</string>
     <string name="browser_cd_selection_mode">Selection mode</string>
     <string name="browser_new_folder">New folder</string>
+    <string name="browser_fab_new">New</string>
+    <string name="browser_breadcrumb_truncated">…</string>
     <string name="browser_cd_refresh">Refresh</string>
     <string name="browser_empty_folder">Folder is empty</string>
     <string name="browser_folder_name_label">Folder name</string>

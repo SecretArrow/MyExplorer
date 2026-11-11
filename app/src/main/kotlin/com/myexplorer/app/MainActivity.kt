@@ -81,6 +81,7 @@ import com.myexplorer.core.common.favorites.add
 import com.myexplorer.core.common.favorites.isFavorite
 import com.myexplorer.core.common.favorites.remove
 import com.myexplorer.core.model.FileNode
+import com.myexplorer.core.ui.adaptive.WindowWidth
 import com.myexplorer.core.ui.adaptive.windowWidthFor
 import com.myexplorer.core.ui.theme.MyExplorerTheme
 import com.myexplorer.data.local.FileRepository
@@ -88,6 +89,7 @@ import com.myexplorer.feature.apps.AppsState
 import com.myexplorer.feature.apps.ui.AppsScreen
 import com.myexplorer.feature.browser.BrowserScreen
 import com.myexplorer.feature.browser.BrowserState
+import com.myexplorer.feature.browser.browser.DualPaneBrowser
 import com.myexplorer.feature.browser.search.IndexedEntry
 import com.myexplorer.feature.browser.search.SearchScreen
 import com.myexplorer.feature.media.player.MediaPlayerScreen
@@ -155,6 +157,7 @@ class MainActivity : AppCompatActivity() {
     private var languageMode by mutableStateOf(LanguageMode.SYSTEM)
     private var zipDialogVisible by mutableStateOf(false)
     private var pendingZipPassword by mutableStateOf<CharArray?>(null)
+    private var pendingZipState: BrowserState? = null
     private var extractTarget by mutableStateOf<File?>(null)
     private var searchOpen by mutableStateOf(false)
     private var appLockEnabled by mutableStateOf(false)
@@ -163,6 +166,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingWidgetPath by mutableStateOf<String?>(null)
 
     private lateinit var browserState: BrowserState
+    private lateinit var browserStateRight: BrowserState
     private lateinit var appsState: AppsState
     private lateinit var themePrefs: ThemePrefs
     private lateinit var languagePrefs: LanguagePrefs
@@ -199,6 +203,8 @@ class MainActivity : AppCompatActivity() {
         vaultDir = File(filesDir, "vault")
         val root = Environment.getExternalStorageDirectory() ?: filesDir
         browserState = BrowserState(repository, root)
+        // Pane kanan utk browser dua panel (layar lebar): state independen, root sama.
+        browserStateRight = BrowserState(repository, root)
         appsState = AppsState(this)
         themePrefs = ThemePrefs(this)
         themeMode = themePrefs.read()
@@ -357,19 +363,43 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 when (screen) {
-                    Screen.BROWSER ->
-                        BrowserScreen(
-                            state = browserState,
-                            hasStorageAccess = hasStorageAccess,
-                            onRequestStorageAccess = { requestStorageAccess() },
-                            onOpenFile = { openFile(it) },
-                            onZip = { zipDialogVisible = true },
-                            onSearch = { searchOpen = true },
-                            // Lebar jendela aktual dipetakan ke klasifikasi (TV/tablet -> grid); screenWidthDp 0/UNDEFINED aman -> COMPACT.
-                            windowWidth = windowWidthFor(LocalConfiguration.current.screenWidthDp),
-                            isFavorite = favorites.isFavorite(browserUi.current.path),
-                            onToggleFavorite = { toggleFavorite() },
-                        )
+                    Screen.BROWSER -> {
+                        // Lebar jendela aktual dipetakan ke klasifikasi (TV/tablet -> grid); screenWidthDp 0/UNDEFINED aman -> COMPACT.
+                        val windowWidth = windowWidthFor(LocalConfiguration.current.screenWidthDp)
+                        if (windowWidth != WindowWidth.COMPACT) {
+                            // Layar lebar (>=600dp): dua panel browser independen; pane kiri
+                            // memakai state yang sama dgn mode ponsel agar rotasi mulus.
+                            DualPaneBrowser(
+                                leftState = browserState,
+                                rightState = browserStateRight,
+                                hasStorageAccess = hasStorageAccess,
+                                onRequestStorageAccess = { requestStorageAccess() },
+                                onOpenFile = { openFile(it) },
+                                onZip = { paneState ->
+                                    pendingZipState = paneState
+                                    zipDialogVisible = true
+                                },
+                                onSearch = { searchOpen = true },
+                                isFavorite = { path -> favorites.isFavorite(path) },
+                                onToggleFavorite = { path -> toggleFavorite(path) },
+                            )
+                        } else {
+                            BrowserScreen(
+                                state = browserState,
+                                hasStorageAccess = hasStorageAccess,
+                                onRequestStorageAccess = { requestStorageAccess() },
+                                onOpenFile = { openFile(it) },
+                                onZip = {
+                                    pendingZipState = browserState
+                                    zipDialogVisible = true
+                                },
+                                onSearch = { searchOpen = true },
+                                windowWidth = windowWidth,
+                                isFavorite = favorites.isFavorite(browserUi.current.path),
+                                onToggleFavorite = { toggleFavorite(browserUi.current.path) },
+                            )
+                        }
+                    }
                     Screen.APPS -> AppsScreen(state = appsState)
                     Screen.STORAGE -> StorageHub()
                     Screen.NETWORK -> NetworkHub()
@@ -555,8 +585,7 @@ class MainActivity : AppCompatActivity() {
      * [WidgetFavoritesStore] dan perbarui widget. Bila tidak ada perubahan
      * (duplikat/penuh), penyimpanan tidak disentuh (defensif).
      */
-    private fun toggleFavorite() {
-        val path = browserState.ui.value.current.path
+    private fun toggleFavorite(path: String) {
         val next = if (favorites.isFavorite(path)) favorites.remove(path) else favorites.add(path)
         if (next == favorites) return
         favorites = next
@@ -598,14 +627,17 @@ class MainActivity : AppCompatActivity() {
      * terenkripsi AES-256 (ZipCrypto) — sandi di-wipe setelah dipakai.
      */
     private fun runZip() {
-        val current = browserState.ui.value.current
+        // ZIP bekerja pada pane yang memicunya (mode dua panel); fallback: pane kiri.
+        val state = pendingZipState ?: browserState
+        pendingZipState = null
+        val current = state.ui.value.current
         val sources =
-            browserState.ui.value.selection
+            state.ui.value.selection
                 .map { File(it) }
                 .filter { it.exists() }
         if (sources.isEmpty()) return
         val archiveName =
-            if (current == browserState.ui.value.root) {
+            if (current == state.ui.value.root) {
                 getString(R.string.app_default_archive_name)
             } else {
                 current.name
@@ -622,8 +654,8 @@ class MainActivity : AppCompatActivity() {
                     zipEngine.zipFiles(sources, target)
                 }
             password?.fill('\u0000')
-            browserState.clearSelection()
-            browserState.refresh()
+            state.clearSelection()
+            state.refresh()
             val message =
                 result.fold(
                     onSuccess = {

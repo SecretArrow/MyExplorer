@@ -19,32 +19,41 @@
 
 package com.myexplorer.feature.browser
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ChevronRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -71,6 +80,7 @@ import com.myexplorer.core.ui.adaptive.WindowWidth
 import com.myexplorer.core.ui.adaptive.browserLayoutFor
 import com.myexplorer.core.ui.components.EmptyState
 import com.myexplorer.core.ui.components.FileRow
+import java.io.File
 
 /**
  * Layar penjelajah berkas.
@@ -99,11 +109,18 @@ fun BrowserScreen(
     val clipboard by state.clipboard.collectAsState()
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var folderName by remember { mutableStateOf("") }
+    var fabMenuOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = if (ui.current == ui.root) stringResource(R.string.browser_title) else ui.current.name) },
+                title = {
+                    if (ui.current == ui.root) {
+                        Text(text = stringResource(R.string.browser_title))
+                    } else {
+                        BrowserBreadcrumb(root = ui.root, current = ui.current)
+                    }
+                },
                 navigationIcon = {
                     if (ui.current != ui.root) {
                         IconButton(onClick = { state.up() }) {
@@ -122,9 +139,6 @@ fun BrowserScreen(
                             if (ui.selectionMode) Icons.Filled.Close else Icons.Filled.CheckCircle,
                             contentDescription = stringResource(R.string.browser_cd_selection_mode),
                         )
-                    }
-                    IconButton(onClick = { showNewFolderDialog = true }) {
-                        Icon(Icons.Filled.Create, contentDescription = stringResource(R.string.browser_new_folder))
                     }
                     if (onToggleFavorite != null) {
                         IconButton(onClick = onToggleFavorite) {
@@ -147,6 +161,30 @@ fun BrowserScreen(
                     }
                 },
             )
+        },
+        floatingActionButton = {
+            Box {
+                FloatingActionButton(
+                    onClick = { fabMenuOpen = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.browser_fab_new))
+                }
+                DropdownMenu(
+                    expanded = fabMenuOpen,
+                    onDismissRequest = { fabMenuOpen = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(R.string.browser_new_folder)) },
+                        onClick = {
+                            fabMenuOpen = false
+                            showNewFolderDialog = true
+                        },
+                        leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
+                    )
+                }
+            }
         },
         bottomBar = {
             if (ui.selectionMode && ui.selection.isNotEmpty()) {
@@ -288,4 +326,74 @@ private fun SelectionBar(
             )
         }
     }
+}
+
+/** Jumlah segmen breadcrumb maksimum yang ditampilkan; segmen lebih tua diganti elipsis. */
+private const val BREADCRUMB_MAX_SEGMENTS = 3
+
+/**
+ * Segmen nama folder dari [root] menuju [current] (urut dangkal -> dalam).
+ * Total: nama kosong (mis. "/") dilewati; iterasi berhenti di [root] atau di puncak
+ * sistem berkas, sehingga tidak pernah melempar galat untuk path apa pun.
+ */
+private fun pathSegments(
+    root: File,
+    current: File,
+): List<String> {
+    val segments = ArrayList<String>()
+    var node: File? = current
+    while (node != null && node != root) {
+        val name = node.name
+        if (name.isNotEmpty()) segments.add(name)
+        node = node.parentFile
+    }
+    return segments.asReversed()
+}
+
+/**
+ * Judul TopAppBar untuk sub-folder: breadcrumb ringkas (paling banyak
+ * [BREADCRUMB_MAX_SEGMENTS] segmen terakhir, elipsis bila terpotong) yang dapat
+ * digulir horizontal. Di path ROOT judul tetap "My Explorer" (lihat BrowserScreen).
+ */
+@Composable
+private fun BrowserBreadcrumb(
+    root: File,
+    current: File,
+    modifier: Modifier = Modifier,
+) {
+    val segments = remember(root, current) { pathSegments(root, current) }
+    val visible = segments.takeLast(BREADCRUMB_MAX_SEGMENTS)
+    Row(
+        modifier = modifier.horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (segments.size > visible.size) {
+            Text(
+                text = stringResource(R.string.browser_breadcrumb_truncated),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            BreadcrumbChevron()
+        }
+        visible.forEachIndexed { index, segment ->
+            if (index > 0) BreadcrumbChevron()
+            Text(
+                text = segment,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BreadcrumbChevron() {
+    Icon(
+        imageVector = Icons.AutoMirrored.Rounded.ChevronRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(16.dp),
+    )
 }

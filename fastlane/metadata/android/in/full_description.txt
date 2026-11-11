@@ -2,6 +2,8 @@ My Explorer adalah file manager Android modern — cepat, privat, dan 100% peran
 
 KELOLA BERKAS
 • Jelajahi penyimpanan internal — folder di atas, urut A–Z
+• Browser dua panel di layar lebar (≥600dp): dua lokasi berdampingan dengan sorotan pane aktif
+• Tema Material 3 biru + dynamic color, daftar berkas bergaya kartu, breadcrumb path, dan FAB buat cepat
 • Seleksi ganda; salin, pindah, ganti nama, dan hapus dengan resolusi konflik nama (timpa / ganti nama / lewati)
 • Recycle bin ber-metadata yang bisa dipulihkan
 • Buat folder dan buka berkas apa pun dengan aplikasi favorit Anda lewat FileProvider

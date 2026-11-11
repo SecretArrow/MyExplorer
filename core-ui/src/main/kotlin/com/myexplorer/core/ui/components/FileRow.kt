@@ -20,13 +20,18 @@
 package com.myexplorer.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Android
@@ -43,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -72,6 +78,20 @@ private fun iconFor(category: FileCategory): ImageVector =
         FileCategory.OTHER -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
 
+/** Warna aksen kategori berkas: dipakai utk ikon (penuh) dan latar lingkaran ikon (alpha 0.12). */
+@Composable
+private fun categoryColor(category: FileCategory): Color =
+    when (category) {
+        FileCategory.FOLDER -> MaterialTheme.colorScheme.primary
+        FileCategory.IMAGE -> MaterialTheme.colorScheme.tertiary
+        FileCategory.VIDEO -> MaterialTheme.colorScheme.secondary
+        FileCategory.AUDIO -> MaterialTheme.colorScheme.tertiary
+        FileCategory.DOCUMENT -> MaterialTheme.colorScheme.secondary
+        FileCategory.ARCHIVE -> MaterialTheme.colorScheme.secondary
+        FileCategory.APK -> MaterialTheme.colorScheme.tertiary
+        FileCategory.OTHER -> MaterialTheme.colorScheme.onSurface
+    }
+
 @Composable
 private fun subtitleFor(node: FileNode): String =
     if (node.isDirectory) {
@@ -87,7 +107,13 @@ fun FileRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val background = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+    val containerColor =
+        if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        }
+    val badgeColor = categoryColor(node.category)
     val subtitle = subtitleFor(node)
     val label =
         buildFileRowLabel(
@@ -101,20 +127,34 @@ fun FileRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(background)
-                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(containerColor)
+                .border(
+                    width = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    shape = RoundedCornerShape(14.dp),
+                ).clickable(onClick = onClick)
                 .semantics(mergeDescendants = true) {
                     contentDescription = label
                     this.selected = isSelected
-                }.padding(horizontal = 16.dp, vertical = 10.dp),
+                }.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = iconFor(node.category),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.width(16.dp))
+        Box(
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .background(badgeColor.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = iconFor(node.category),
+                contentDescription = null,
+                tint = badgeColor,
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = node.name,

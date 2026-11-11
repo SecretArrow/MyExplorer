@@ -2,6 +2,8 @@ My Explorer is a modern file manager for Android — fast, private, and 100% fre
 
 FILE MANAGEMENT
 • Browse internal storage with folder-first navigation and A–Z sorting
+• Dual-pane browsing on wide screens (≥600dp): two locations side by side with an active-pane highlight
+• Material 3 blue theme with dynamic color, card-style file list, breadcrumb path bar, and a quick-create FAB
 • Multi-select; copy, move, rename, and delete with name-conflict resolution (overwrite / rename / skip)
 • Recoverable, metadata-based recycle bin
 • Create folders and open any file with your favorite apps via FileProvider

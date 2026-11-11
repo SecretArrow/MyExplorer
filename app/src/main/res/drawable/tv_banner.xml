@@ -18,24 +18,24 @@
   along with this program. If not, see <https://www.gnu.org/licenses/>.
 -->
 <!-- My Explorer TV banner - domain publik / lisensi proyek (GPL-3.0-only) -->
-<!-- Banner launcher Android TV 320x180 (leanback): latar rounded rect biru teal gelap,
-     aksen folder putih berlidah oranye di tengah kiri, dan garis putih tipis sebagai berkas. -->
+<!-- Banner launcher Android TV 320x180 (leanback): latar rounded rect biru gelap,
+     aksen folder putih berlidah biru muda di tengah kiri, dan garis putih tipis sebagai berkas. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="320dp"
     android:height="180dp"
     android:viewportWidth="320"
     android:viewportHeight="180">
-    <!-- Latar: rounded rect biru teal gelap penuh (radius 16). -->
+    <!-- Latar: rounded rect biru gelap penuh (radius 16). -->
     <path
-        android:fillColor="#0B3B3C"
+        android:fillColor="#062E6F"
         android:pathData="M16,0h288a16,16 0 0 1 16,16v148a16,16 0 0 1 -16,16h-288a16,16 0 0 1 -16,-16v-148a16,16 0 0 1 16,-16z" />
-    <!-- Aksen latar: lingkaran teal lebih terang di kanan (kedalaman halus). -->
+    <!-- Aksen latar: lingkaran biru lebih terang di kanan (kedalaman halus). -->
     <path
-        android:fillColor="#0F4A4B"
+        android:fillColor="#0842A0"
         android:pathData="M188,92a64,64 0 1 0 128,0a64,64 0 1 0 -128,0z" />
-    <!-- Lidah folder (oranye), digambar sebelum badan agar sambungan rapi. -->
+    <!-- Lidah folder (biru muda), digambar sebelum badan agar sambungan rapi. -->
     <path
-        android:fillColor="#F59E0B"
+        android:fillColor="#A8C7FA"
         android:pathData="M74,56h36l10,10v8h-46z" />
     <!-- Badan folder (putih), tengah kiri banner. -->
     <path

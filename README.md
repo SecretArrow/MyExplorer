@@ -57,6 +57,8 @@ Foundation, berlisensi **GPL-3.0-only**:
 ## Fitur
 
 - Browse internal storage, folder dulu + nama A-Z, thumbnail kategori berkas
+- Browser dua panel (dual-pane) di layar lebar (≥600dp): dua lokasi berdampingan, pane aktif tersorot, tiap pane punya FAB sendiri
+- UI Material 3: tema biru + dynamic color, kartu berkas rounded dengan ikon kategori berwarna, breadcrumb path di TopAppBar, FAB "Baru"
 - Operasi: buka, navigasi naik, seleksi multi-item, hapus (ke recycle bin yang bisa dipulihkan),
   salin/potong/tempel (dengan resolusi konflik nama), folder baru, refresh
 - Buka berkas dengan aplikasi lain (FileProvider)
