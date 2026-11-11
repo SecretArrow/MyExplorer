@@ -26,28 +26,68 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Siapkan keystore dari secrets (opsional)
+      # Info-ZIP `unzip` di runner TIDAK bisa membuka zip AES-256, jadi
+      # ekstraksi wajib lewat pyzipper. Keystore dikeluarkan ke RUNNER_TEMP
+      # (di luar workspace, tidak ikut artefak/commit) dengan nama tetap
+      # myexplorer-release.jks; nama asli di dalam zip boleh apa pun
+      # (.jks / .keystore).
+      - name: Siapkan keystore dari key-sign-apk.zip
         env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEY_ZIP_PASSWORD: ${{ secrets.KEY_ZIP_PASSWORD }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
-            {
-              echo "RELEASE_STORE_FILE=$GITHUB_WORKSPACE/release.keystore"
-              echo "RELEASE_STORE_PASSWORD=$RELEASE_KEYSTORE_PASSWORD"
-              echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
-              echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
-            } >> "$GITHUB_ENV"
-            echo "Keystore dimuat -> build akan ditandatangani."
-          else
-            echo "Secrets keystore belum diisi -> menghasilkan build UNSIGNED."
-          fi
+          set -euo pipefail
+          # Fallback --break-system-packages: pip sistem di ubuntu-24.04
+          # (PEP 668) menolak instalasi tanpa flag tersebut.
+          pip3 install --quiet pyzipper || pip3 install --quiet --break-system-packages pyzipper
+          python3 - <<'EOF'
+          import os, pyzipper
+          pwd = os.environ['KEY_ZIP_PASSWORD'].encode()
+          with pyzipper.AESZipFile('key-sign-apk.zip') as z:
+              z.setpassword(pwd)
+              names = z.namelist()
+              jks = [n for n in names if n.endswith('.jks') or n.endswith('.keystore')]
+              assert jks, f'tidak ada keystore (.jks/.keystore) dalam zip: {names}'
+              target = os.path.join(os.environ['RUNNER_TEMP'], 'myexplorer-release.jks')
+              with open(target, 'wb') as f:
+                  f.write(z.read(jks[0]))
+              print('terekstrak:', jks[0], '->', target)
+          EOF
+          JKS="$RUNNER_TEMP/myexplorer-release.jks"
+          test -s "$JKS"
+          {
+            echo "RELEASE_STORE_FILE=$JKS"
+            echo "RELEASE_STORE_PASSWORD=$RELEASE_KEYSTORE_PASSWORD"
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
       - name: Build release APK & AAB
         run: ./gradlew assembleRelease bundleRelease --stacktrace
+
+      # Verifikasi wajib: APK rilis HARUS ditandatangani keystore rilis.
+      # Jika fingerprint SHA-256 tidak cocok (mis. build unsigned karena env
+      # signing tidak terbaca), step ini gagal dan Release tidak dibuat.
+      - name: Verifikasi tanda tangan (fingerprint keystore == APK)
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          sidik_jks=$("$JAVA_HOME/bin/keytool" -list -v -keystore "$RELEASE_STORE_FILE" -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" 2>/dev/null | grep -m1 -i "SHA256:" | sed 's/.*SHA256:[[:space:]]*//' | tr -d ':' | tr 'A-F' 'a-f')
+          sidik_apk=$(grep -m1 -i "certificate SHA-256 digest" "$RUNNER_TEMP/certs.txt" | sed 's/.*digest:[[:space:]]*//' | tr -d ':' | tr 'A-F' 'a-f')
+          test -n "$sidik_jks" -a "$sidik_jks" = "$sidik_apk"
+          echo "OK: APK ditandatangani keystore rilis ($sidik_apk)"
+
+      - name: Bersihkan keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/*.jks "$RUNNER_TEMP/certs.txt"
 
       - name: Tentukan nama tag release
         id: rel
