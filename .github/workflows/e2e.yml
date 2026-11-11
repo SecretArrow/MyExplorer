@@ -38,14 +38,17 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          # PENTING: runner mengeksekusi skrip PER BARIS — hindari blok multi-baris
-          # (until/do/done). Setiap baris harus mandiri; retry instal via || { sleep; install; }.
-          # Splits ABI aktif → APK debug dinamai app-<abi>-debug.apk (tidak ada
-          # lagi app-debug.apk tunggal). Emulator ini x86_64 → pasang APK x86_64.
+          # PENTING: JANGAN memasang APK manual di sini! Instalasi manual terbukti
+          # konflik dengan instalasi AGP/UTP (INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+          # signature) yang DITELAN UTP sebagai BUILD SUCCESSFUL — akibatnya test
+          # instrumented app tidak pernah benar-benar berjalan (false green, run
+          # #4–#8). AGP memasang app APK + test APK sendiri; izin akses semua
+          # berkas kini diberikan dari dalam instrumentasi lewat StorageAccessRule
+          # (ClassRule, appops via UiAutomation) sebelum aktivitas diluncurkan.
+          # Runner mengeksekusi skrip per baris — setiap baris harus mandiri.
           script: |
-            adb install -g -t app/build/outputs/apk/debug/app-x86_64-debug.apk || { sleep 20; adb install -g -t app/build/outputs/apk/debug/app-x86_64-debug.apk; } || { sleep 20; adb install -g -t app/build/outputs/apk/debug/app-x86_64-debug.apk; }
-            adb shell appops set com.myexplorer.app MANAGE_EXTERNAL_STORAGE allow
             ./gradlew connectedDebugAndroidTest --stacktrace
+            python3 tools/verify_e2e.py
 
       - name: Upload laporan e2e (saat gagal)
         if: failure()

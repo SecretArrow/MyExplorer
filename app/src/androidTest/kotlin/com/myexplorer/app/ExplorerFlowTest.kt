@@ -35,6 +35,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,8 +49,8 @@ import java.io.File
  * Semua literal UI disalin PERSIS dari `values/strings.xml` masing-masing modul
  * (lokal emulator CI = English): "New"/"New folder"/"Folder name"/"Create" (browser),
  * "Selection mode"/"Delete"/"Search" (ikon browser), "Settings"/"Apps"/"Storage"/
- * "Network" (tab bawah), "My Explorer 1.0.0" (settings_about_name_version dengan
- * versionName 1.0.0), "File or folder name" (search_query_hint), "Analysis"/"Vault"
+ * "Network" (tab bawah), "My Explorer <versionName>" (settings_about_name_version,
+ * versionName dibaca runtime dari PackageManager), "File or folder name" (search_query_hint), "Analysis"/"Vault"
  * (app_storage_section_*), "Storage analysis"/"Encrypted vault" (tools_*), "FTP
  * server"/"Locations"/"Sync" (app_network_section_* + transfer_title), "Inactive"/
  * "Port"/"Start" (transfer_*), "Saved connections"/"Add location" (network_*).
@@ -117,9 +118,15 @@ class ExplorerFlowTest {
             composeRule.onAllNodesWithText("Settings").fetchSemanticsNodes().size >= 2
         }
 
-        // Baris About: "My Explorer %1$s" dengan versionName 1.0.0; kartu bisa
-        // berada di bawah lipatan daftar sehingga digulir bila perlu.
-        scrollToText("My Explorer 1.0.0")
+        // Baris About: "My Explorer %1$s" dengan versionName aktual yang dibaca
+        // runtime dari PackageManager (tidak di-hardcode agar tidak lapuk tiap
+        // bump versi); kartu bisa berada di bawah lipatan daftar sehingga digulir
+        // bila perlu.
+        val version = composeRule.activity.packageManager
+            .getPackageInfo(composeRule.activity.packageName, 0)
+            .versionName
+            .orEmpty()
+        scrollToText("My Explorer $version")
     }
 
     @Test
@@ -274,7 +281,15 @@ class ExplorerFlowTest {
         }
     }
 
-    private companion object {
+    companion object {
+        // Akses semua berkas (appops) SEBELUM aktivitas diluncurkan compose rule
+        // — menggantikan instalasi manual + appops di workflow yang konflik
+        // dengan AGP/UTP dan membuat test tidak pernah benar-benar berjalan
+        // (false green, E2E #4–#8). Lihat StorageAccessRule.
+        @JvmField
+        @ClassRule
+        val storageAccess = StorageAccessRule()
+
         const val TIMEOUT_MILLIS = 10_000L
     }
 }

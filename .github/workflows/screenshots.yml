@@ -1,0 +1,55 @@
+name: Screenshots
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: screenshots
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Tangkapan layar UI (emulator Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build APK & APK androidTest
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Ambil screenshot di emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          # Image yang sama dengan E2E (ATD, cepat & stabil). Tanpa instalasi
+          # manual APK — AGP/UTP yang memasang (instalasi manual konflik dengan
+          # AGP; lihat komentar di e2e.yml). Akses semua berkas diberikan dari
+          # dalam instrumentasi lewat StorageAccessRule.
+          api-level: 30
+          target: aosp_atd
+          arch: x86_64
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          # Runner mengeksekusi skrip per baris — setiap baris harus mandiri.
+          # Test berjalan hanya ScreenshotTest (filter class) dengan argumen
+          # instrumentation screenshots=true; hasil PNG di /sdcard/MyExplorerScreenshots.
+          script: |
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.myexplorer.app.ScreenshotTest -Pandroid.testInstrumentationRunnerArguments.screenshots=true --stacktrace
+            adb pull /sdcard/MyExplorerScreenshots ./screenshots
+            test "$(find screenshots -name '*.png' | wc -l)" -ge 12
+
+      - name: Upload tangkapan layar (artifact)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-screenshots
+          path: screenshots/
+          retention-days: 7
