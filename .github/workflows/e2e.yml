@@ -46,9 +46,24 @@ jobs:
           echo no | avdmanager create avd --force -n test \
             --package 'system-images;android-30;aosp_atd;x86_64'
           test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan:"; ls -laR "$HOME/.android" "$HOME/.config/.android" 2>/dev/null; exit 1; }
+          # Image runner 26.04 tidak memberi akses /dev/kvm ke user runner.
+          # Coba beri izin; bila tetap gagal, fallback ke TCG (-accel off,
+          # persis perilaku android-emulator-runner, boot lebih lambat).
+          ACCEL=""
+          if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+            echo "KVM tersedia — hardware acceleration aktif."
+          else
+            sudo chmod 666 /dev/kvm 2>/dev/null || true
+            if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+              echo "KVM diaktifkan via chmod 666."
+            else
+              echo "KVM tidak tersedia — fallback ke TCG (boot lambat)."
+              ACCEL="-accel off"
+            fi
+          fi
           "$ANDROID_HOME/emulator/emulator" -avd test -no-window \
             -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot \
-            > /tmp/emulator.log 2>&1 &
+            $ACCEL > /tmp/emulator.log 2>&1 &
           EMU_PID=$!
           deadline=$((SECONDS + 900))
           while [ $SECONDS -lt $deadline ]; do
