@@ -39,7 +39,9 @@ import org.junit.rules.ExternalResource
  */
 class StorageAccessRule : ExternalResource() {
     override fun before() {
-        InstrumentationRegistry.getInstrumentation().uiAutomation
+        InstrumentationRegistry
+            .getInstrumentation()
+            .uiAutomation
             .executeShellCommand("appops set com.myexplorer.app MANAGE_EXTERNAL_STORAGE allow")
             .close()
     }

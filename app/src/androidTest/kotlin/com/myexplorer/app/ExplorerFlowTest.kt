@@ -122,10 +122,11 @@ class ExplorerFlowTest {
         // runtime dari PackageManager (tidak di-hardcode agar tidak lapuk tiap
         // bump versi); kartu bisa berada di bawah lipatan daftar sehingga digulir
         // bila perlu.
-        val version = composeRule.activity.packageManager
-            .getPackageInfo(composeRule.activity.packageName, 0)
-            .versionName
-            .orEmpty()
+        val version =
+            composeRule.activity.packageManager
+                .getPackageInfo(composeRule.activity.packageName, 0)
+                .versionName
+                .orEmpty()
         scrollToText("My Explorer $version")
     }
 

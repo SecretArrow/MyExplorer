@@ -178,7 +178,9 @@ class ScreenshotTest {
 
     /** Jalankan perintah shell sebagai UID shell (wm/cmd) dari dalam instrumentasi. */
     private fun shell(command: String) {
-        composeRule.instrumentation.uiAutomation.executeShellCommand(command).close()
+        composeRule.instrumentation.uiAutomation
+            .executeShellCommand(command)
+            .close()
     }
 
     /** Polling sampai node ikon dengan contentDescription [description] tampil. */
