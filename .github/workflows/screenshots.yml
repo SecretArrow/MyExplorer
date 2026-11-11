@@ -40,6 +40,7 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
           sdkmanager --install "system-images;android-30;aosp_atd;x86_64" > /dev/null
           echo no | avdmanager create avd --force -n test \
+            --device pixel \
             --package 'system-images;android-30;aosp_atd;x86_64'
           test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan:"; ls -laR "$HOME/.android" "$HOME/.config/.android" 2>/dev/null; exit 1; }
           # Image runner 26.04 tidak memberi akses /dev/kvm ke user runner.
@@ -79,6 +80,8 @@ jobs:
             echo "TIMEOUT menunggu emulator — log:"; tail -40 /tmp/emulator.log; exit 1
           fi
           adb shell input keyevent 82 || true   # best-effort, tidak fatal
+          # Diagnostik rendering: PNG ini harus berisi launcher (bukan hitam).
+          adb exec-out screencap -p > /tmp/boot-screen.png || true
 
       # Tanpa instalasi manual APK — AGP/UTP yang memasang (instalasi manual
       # konflik dengan AGP; lihat komentar di e2e.yml). Akses semua berkas
@@ -110,5 +113,6 @@ jobs:
           name: screenshots-debug
           path: |
             /tmp/emulator.log
+            /tmp/boot-screen.png
             **/build/outputs/androidTest-results/
           retention-days: 7

@@ -19,8 +19,8 @@
 
 package com.myexplorer.app
 
-import android.graphics.Bitmap
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
@@ -43,15 +43,21 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.io.FileOutputStream
 
 /**
  * Menangkap tangkapan layar seluruh layar utama untuk dokumentasi rilis.
  *
  * Test ini HANYA dijalankan bila workflow memintanya lewat argumen instrumentation
  * `screenshots=true` (lihat .github/workflows/screenshots.yml); pada eksekusi e2e
- * biasa test ini di-skip lewat asumsi agar perubahan `wm size` / kepadatan /
- * mode malam tidak bocor ke test lain.
+ * biasa test ini DIKECUALIKAN lewat `notClass` (asumsi di @Before tetap ada sebagai
+ * jaring pengaman — pelaporan XML UTP ternyata mencatat AssumptionViolatedException
+ * @Before sebagai failure, jadi pengecualian notClass itu yang utama).
+ *
+ * Capture memakai `screencap` shell (via UiAutomation.executeShellCommand) —
+ * UiAutomation.takeScreenshot() terbukti menghasilkan frame hitam penuh pada
+ * emulator headless (swiftshader); screencap adalah path yang sama dengan
+ * `adb exec-out screencap -p` yang terekam benar di ATD. Ukuran berkas hasil
+ * divalidasi agar frame hitam/blank terdeteksi cepat, bukan lolos senyap.
  *
  * Alur: ponsel portrait terang (browser, menu FAB, dialog folder baru, pencarian,
  * tab Apps/Storage/Network/Settings) -> dual-pane landscape (wm size 1920x1080,
@@ -164,19 +170,30 @@ class ScreenshotTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
     /**
-     * Simpan tangkapan layar penuh (UiAutomation mengambil display aktual,
-     * termasuk dialog) sebagai PNG di [shotDir]; tunggu compose idle dulu agar
-     * transisi selesai dan konten stabil.
+     * Simpan tangkapan layar penuh sebagai PNG di [shotDir]; tunggu compose idle
+     * dulu agar transisi selesai dan konten stabil.
+     *
+     * `screencap` dijalankan sebagai UID shell — berkasnya ditulis langsung ke
+     * /sdcard (shell punya akses penuh emulated storage). executeShellCommand
+     * bersifat asinkron, jadi stream fd-nya dikuras sampai EOF untuk menunggu
+     * proses selesai sebelum navigasi berikutnya.
      */
     private fun capture(name: String) {
         runCatching { composeRule.waitForIdle() }
         Thread.sleep(CAPTURE_SETTLE_MILLIS)
-        val bitmap = instrumentation.uiAutomation.takeScreenshot()
         val target = File(shotDir, "$name.png")
-        FileOutputStream(target).use { stream ->
-            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
-                "Gagal menulis ${target.path}"
+        val fd = instrumentation.uiAutomation
+            .executeShellCommand("screencap -p ${target.absolutePath}")
+        fd.use { descriptor ->
+            ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { stream ->
+                val buffer = ByteArray(8192)
+                while (stream.read(buffer) != -1) {
+                    // Kuras output sampai screencap selesai.
+                }
             }
+        }
+        check(target.exists() && target.length() > MIN_PNG_BYTES) {
+            "screencap menghasilkan berkas kosong/hitam: ${target.path} (${target.length()} B)"
         }
     }
 
@@ -250,6 +267,9 @@ class ScreenshotTest {
 
         const val SCREEN_DIR = "MyExplorerScreenshots"
         const val TIMEOUT_MILLIS = 10_000L
+
+        /** PNG UI sungguhan selalu > 2 KB; frame hitam solid ~1 KB -> gagal cepat. */
+        const val MIN_PNG_BYTES = 2_000L
 
         /** Jeda agar animasi/transisi selesai sebelum tangkapan layar. */
         const val CAPTURE_SETTLE_MILLIS = 1_500L
