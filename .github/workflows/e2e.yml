@@ -35,6 +35,8 @@ jobs:
       # input/settings benar-benar aktif sebelum lanjut.
       - name: Buat & boot emulator (tunggu layanan sistem siap)
         run: |
+          # sdkmanager/avdmanager tidak ada di PATH default runner — tambahkan.
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           sdkmanager --install "system-images;android-30;aosp_atd;x86_64" > /dev/null
           echo no | avdmanager create avd --force -n test \
             --package 'system-images;android-30;aosp_atd;x86_64'
