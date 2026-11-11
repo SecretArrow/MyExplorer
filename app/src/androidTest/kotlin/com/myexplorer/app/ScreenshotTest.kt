@@ -159,6 +159,10 @@ class ScreenshotTest {
         capture("13-files-dark")
     }
 
+    /** Instrumentasi aktif — AndroidComposeTestRule di versi ini tidak punya
+     * properti `instrumentation`, jadi ambil lewat InstrumentationRegistry. */
+    private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
+
     /**
      * Simpan tangkapan layar penuh (UiAutomation mengambil display aktual,
      * termasuk dialog) sebagai PNG di [shotDir]; tunggu compose idle dulu agar
@@ -167,7 +171,7 @@ class ScreenshotTest {
     private fun capture(name: String) {
         runCatching { composeRule.waitForIdle() }
         Thread.sleep(CAPTURE_SETTLE_MILLIS)
-        val bitmap = composeRule.instrumentation.uiAutomation.takeScreenshot()
+        val bitmap = instrumentation.uiAutomation.takeScreenshot()
         val target = File(shotDir, "$name.png")
         FileOutputStream(target).use { stream ->
             check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
@@ -178,7 +182,7 @@ class ScreenshotTest {
 
     /** Jalankan perintah shell sebagai UID shell (wm/cmd) dari dalam instrumentasi. */
     private fun shell(command: String) {
-        composeRule.instrumentation.uiAutomation
+        instrumentation.uiAutomation
             .executeShellCommand(command)
             .close()
     }
