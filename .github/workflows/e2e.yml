@@ -62,30 +62,60 @@ jobs:
               ACCEL="-accel off"
             fi
           fi
-          "$ANDROID_HOME/emulator/emulator" -avd test -no-window \
-            -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot \
-            $ACCEL > /tmp/emulator.log 2>&1 &
-          EMU_PID=$!
-          deadline=$((SECONDS + 900))
-          while [ $SECONDS -lt $deadline ]; do
-            if ! kill -0 "$EMU_PID" 2>/dev/null; then
-              echo "Emulator mati lebih awal — log:"; tail -40 /tmp/emulator.log; exit 1
-            fi
-            boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-            if [ "$boot" = "1" ] \
-               && adb shell service check input 2>/dev/null | tr -d '\r' | grep -q ': found' \
-               && adb shell service check settings 2>/dev/null | tr -d '\r' | grep -q ': found'; then
-              echo "Emulator siap penuh (boot_completed + layanan input/settings aktif)."
-              break
-            fi
-            sleep 5
+
+          # Backend gfxstream bawaan emulator 37.x + SwiftShader terbukti
+          # menghasilkan frame hitam penuh (bug koordinasi guest/host; screencap
+          # launcher pun hitam). Coba mode berurutan sampai tangkapan layar boot
+          # benar-benar berisi konten — PNG solid 1080x1920 ~13 KB, konten nyata
+          # jauh lebih besar (> 30 KB).
+          GPU_MODES=(
+            "-gpu swiftshader_indirect -feature -GfxStream"
+            "-gpu guest"
+            "-gpu swiftshader_indirect"
+          )
+          boot_and_check() {
+            local flags="$1"
+            "$ANDROID_HOME/emulator/emulator" -avd test -no-window -noaudio \
+              -no-boot-anim -no-snapshot $ACCEL $flags > /tmp/emulator.log 2>&1 &
+            EMU_PID=$!
+            local deadline=$((SECONDS + 420))
+            while [ $SECONDS -lt $deadline ]; do
+              if ! kill -0 "$EMU_PID" 2>/dev/null; then
+                echo "Emulator mati lebih awal (mode: $flags) — log:"; tail -20 /tmp/emulator.log
+                return 1
+              fi
+              local boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+              if [ "$boot" = "1" ] \
+                 && adb shell service check input 2>/dev/null | tr -d '\r' | grep -q ': found' \
+                 && adb shell service check settings 2>/dev/null | tr -d '\r' | grep -q ': found'; then
+                adb shell input keyevent 82 || true   # buka keyguard bila ada
+                sleep 8                               # beri waktu compositor merender
+                adb exec-out screencap -p > /tmp/boot-screen.png || true
+                local size=$(stat -c%s /tmp/boot-screen.png 2>/dev/null || echo 0)
+                if [ "$size" -gt 30000 ]; then
+                  echo "Render OK (mode: $flags, boot-screen $size B) — emulator siap."
+                  return 0
+                fi
+                echo "Mode '$flags': layar solid/hitam ($size B) — coba mode berikutnya."
+                return 1
+              fi
+              sleep 5
+            done
+            echo "TIMEOUT boot (mode: $flags) — log:"; tail -20 /tmp/emulator.log
+            return 1
+          }
+
+          GPU_OK=0
+          for FLAGS in "${GPU_MODES[@]}"; do
+            if boot_and_check "$FLAGS"; then GPU_OK=1; break; fi
+            kill "$EMU_PID" 2>/dev/null || true
+            wait "$EMU_PID" 2>/dev/null || true
+            sleep 3
           done
-          if [ $SECONDS -ge $deadline ]; then
-            echo "TIMEOUT menunggu emulator — log:"; tail -40 /tmp/emulator.log; exit 1
+          if [ "$GPU_OK" != "1" ]; then
+            echo "Semua mode GPU gagal render — log terakhir:"; tail -50 /tmp/emulator.log
+            exit 1
           fi
-          adb shell input keyevent 82 || true   # best-effort, tidak fatal
-          # Diagnostik rendering: PNG ini harus berisi launcher (bukan hitam).
-          adb exec-out screencap -p > /tmp/boot-screen.png || true
 
       # PENTING: JANGAN memasang APK manual! Instalasi manual terbukti konflik
       # dengan instalasi AGP/UTP (INSTALL_FAILED_UPDATE_INCOMPATIBLE, signature)

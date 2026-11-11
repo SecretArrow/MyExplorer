@@ -10,8 +10,8 @@ E2E "hijau" padahal kosong (run #4–#8). Skrip ini memfail build bila:
   - ada failure/error.
 
 Dipanggil dari .github/workflows/e2e.yml setelah ./gradlew
-connectedDebugAndroidTest. Pengecualian: test yang di-skip (asumsi) diizinkan
-— contohnya ScreenshotTest hanya berjalan di workflow screenshots.
+connectedDebugAndroidTest. ScreenshotTest DIKECUALIKAN dari e2e lewat argumen
+instrumentation `notClass` (milik workflow Screenshots).
 """
 from __future__ import annotations
 
@@ -19,7 +19,9 @@ import glob
 import sys
 import xml.etree.ElementTree as ET
 
-MIN_TESTS = 10
+# 9 test e2e (BrowserSmokeTest + ExplorerFlowTest); ScreenshotTest dikecualikan
+# lewat notClass di e2e.yml karena milik workflow Screenshots.
+MIN_TESTS = 9
 PATTERN = "app/build/outputs/androidTest-results/**/*.xml"
 
 
