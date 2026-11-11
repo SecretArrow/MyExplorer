@@ -158,3 +158,20 @@ jobs:
             echo "PERHATIAN: RELEASE_TOKEN belum diisi -> tag tidak memicu Release otomatis."
           fi
           echo "Tag rilis dibuat: $VERSION"
+          # Diamati pada v1.0.0 & v1.1.0: push tag — bahkan dengan PAT — TIDAK
+          # selalu memicu workflow Release. Solusi deterministik: dispatch
+          # eksplisit workflow Release pada ref tag via API. Aman bila kedua
+          # mekanisme aktif — release.yml punya concurrency group per ref dan
+          # action-gh-release upsert rilis per tag.
+          if [ -n "$RELEASE_TOKEN" ]; then
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              -H "Authorization: token $RELEASE_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/SecretArrow/MyExplorer/actions/workflows/release.yml/dispatches" \
+              -d "{\"ref\":\"$VERSION\"}")
+            echo "Dispatch workflow Release pada $VERSION: HTTP $STATUS"
+            if [ "$STATUS" != "204" ]; then
+              echo "::error::gagal dispatch Release (HTTP $STATUS) — jalankan manual: Actions > Release > Run workflow pada ref $VERSION"
+              exit 1
+            fi
+          fi

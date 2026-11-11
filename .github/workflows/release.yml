@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  # Anti dobel-run (mis. dispatch manual + trigger tag hampir bersamaan):
+  # run baru pada ref yang sama membatalkan run lama yang masih berjalan.
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     name: Build & Publish Release
