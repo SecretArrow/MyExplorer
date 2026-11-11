@@ -37,20 +37,36 @@ jobs:
         run: |
           # sdkmanager/avdmanager tidak ada di PATH default runner — tambahkan.
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          # avdmanager & emulator lama menulis/membaca AVD di lokasi berbeda
+          # (asimetri XDG) -> pin eksplisit agar konsisten.
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          export ANDROID_USER_HOME="$HOME/.android"
+          mkdir -p "$ANDROID_AVD_HOME"
           sdkmanager --install "system-images;android-30;aosp_atd;x86_64" > /dev/null
           echo no | avdmanager create avd --force -n test \
             --package 'system-images;android-30;aosp_atd;x86_64'
-          nohup "$ANDROID_HOME/emulator/emulator" -avd test -no-window \
+          test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan:"; ls -laR "$HOME/.android" "$HOME/.config/.android" 2>/dev/null; exit 1; }
+          "$ANDROID_HOME/emulator/emulator" -avd test -no-window \
             -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot \
             > /tmp/emulator.log 2>&1 &
-          timeout 900 bash -c '
-            adb wait-for-device
-            until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 3; done
-            echo "sys.boot_completed=1"
-            until adb shell service check input 2>/dev/null | tr -d "\r" | grep -q ": found"; do sleep 2; done
-            until adb shell service check settings 2>/dev/null | tr -d "\r" | grep -q ": found"; do sleep 2; done
-            echo "Layanan input & settings siap — emulator benar-benar siap."
-          '
+          EMU_PID=$!
+          deadline=$((SECONDS + 900))
+          while [ $SECONDS -lt $deadline ]; do
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "Emulator mati lebih awal — log:"; tail -40 /tmp/emulator.log; exit 1
+            fi
+            boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            if [ "$boot" = "1" ] \
+               && adb shell service check input 2>/dev/null | tr -d '\r' | grep -q ': found' \
+               && adb shell service check settings 2>/dev/null | tr -d '\r' | grep -q ': found'; then
+              echo "Emulator siap penuh (boot_completed + layanan input/settings aktif)."
+              break
+            fi
+            sleep 5
+          done
+          if [ $SECONDS -ge $deadline ]; then
+            echo "TIMEOUT menunggu emulator — log:"; tail -40 /tmp/emulator.log; exit 1
+          fi
           adb shell input keyevent 82 || true   # best-effort, tidak fatal
 
       # PENTING: JANGAN memasang APK manual! Instalasi manual terbukti konflik
