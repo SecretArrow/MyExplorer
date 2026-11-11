@@ -20,6 +20,7 @@
 package com.myexplorer.app
 
 import android.os.Environment
+import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
@@ -43,6 +44,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import kotlin.math.max
 
 /**
  * Menangkap tangkapan layar seluruh layar utama untuk dokumentasi rilis.
@@ -196,6 +198,35 @@ class ScreenshotTest {
         check(target.exists() && target.length() > MIN_PNG_BYTES) {
             "screencap menghasilkan berkas kosong/hitam: ${target.path} (${target.length()} B)"
         }
+        assertRendered(target)
+    }
+
+    /**
+     * Validasi render: tangkapan layar sungguhan memuat banyak warna unik;
+     * frame hitam/kosong dari emulator headless yang gagal komposisi hanya
+     * punya 1-2 warna. Sampling piksel tiap langkah w/64 x h/64 cukup murah
+     * dan gagal cepat sebelum test lanjut menangkap layar berikutnya.
+     */
+    private fun assertRendered(target: File) {
+        val options = BitmapFactory.Options().apply { inSampleSize = 8 }
+        val bitmap = BitmapFactory.decodeFile(target.absolutePath, options)
+        checkNotNull(bitmap) { "PNG tidak bisa didekode: ${target.path}" }
+        val colors = HashSet<Int>()
+        val stepX = max(1, bitmap.width / 64)
+        val stepY = max(1, bitmap.height / 64)
+        var y = 0
+        while (y < bitmap.height) {
+            var x = 0
+            while (x < bitmap.width) {
+                colors.add(bitmap.getPixel(x, y))
+                x += stepX
+            }
+            y += stepY
+        }
+        bitmap.recycle()
+        check(colors.size >= MIN_UNIQUE_COLORS) {
+            "Tangkapan layar nyaris kosong (${colors.size} warna unik — render gagal?): ${target.path}"
+        }
     }
 
     /** Jalankan perintah shell sebagai UID shell (wm/cmd) dari dalam instrumentasi. */
@@ -271,6 +302,9 @@ class ScreenshotTest {
 
         /** PNG UI sungguhan selalu > 2 KB; frame hitam solid ~1 KB -> gagal cepat. */
         const val MIN_PNG_BYTES = 2_000L
+
+        /** Frame nyaris kosong (hitam/komposisi gagal) punya sangat sedikit warna. */
+        const val MIN_UNIQUE_COLORS = 50
 
         /** Jeda agar animasi/transisi selesai sebelum tangkapan layar. */
         const val CAPTURE_SETTLE_MILLIS = 1_500L

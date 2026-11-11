@@ -29,7 +29,7 @@ jobs:
       # e2e.yml (action pihak ketiga menjalankan `input keyevent 82` tanpa
       # retry tepat setelah boot_completed; pada boot lambat layanan `input`
       # belum terpublish dan job gagal).
-      - name: Buat & boot emulator (tunggu layanan sistem siap)
+      - name: Buat & boot emulator (gerbang render + layanan sistem)
         run: |
           # sdkmanager/avdmanager tidak ada di PATH default runner — tambahkan.
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
@@ -37,15 +37,9 @@ jobs:
           # (asimetri XDG) -> pin eksplisit agar konsisten.
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           export ANDROID_USER_HOME="$HOME/.android"
-          mkdir -p "$ANDROID_AVD_HOME"
-          sdkmanager --install "system-images;android-30;aosp_atd;x86_64" > /dev/null
-          echo no | avdmanager create avd --force -n test \
-            --device pixel \
-            --package 'system-images;android-30;aosp_atd;x86_64'
-          test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan:"; ls -laR "$HOME/.android" "$HOME/.config/.android" 2>/dev/null; exit 1; }
+          mkdir -p "$ANDROID_AVD_HOME" /tmp/diag
           # Image runner 26.04 tidak memberi akses /dev/kvm ke user runner.
-          # Coba beri izin; bila tetap gagal, fallback ke TCG (-accel off,
-          # persis perilaku android-emulator-runner, boot lebih lambat).
+          # Coba beri izin; bila tetap gagal, fallback ke TCG (-accel off).
           ACCEL=""
           if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
             echo "KVM tersedia — hardware acceleration aktif."
@@ -59,16 +53,29 @@ jobs:
             fi
           fi
 
-          # Backend gfxstream bawaan emulator 37.x + SwiftShader terbukti
-          # menghasilkan frame hitam penuh (bug koordinasi guest/host; screencap
-          # launcher pun hitam). Coba mode berurutan sampai tangkapan layar boot
-          # benar-benar berisi konten — PNG solid 1080x1920 ~13 KB, konten nyata
-          # jauh lebih besar (> 30 KB). Sama seperti e2e.yml.
-          GPU_MODES=(
-            "-gpu swiftshader_indirect -feature -GfxStream"
-            "-gpu guest"
-            "-gpu swiftshader_indirect"
+          # Kombinasi (image|flags) dicoba berurutan. Latar belakang: backend
+          # gfxstream emulator 37.x + SwiftShader menghasilkan frame HITAM penuh
+          # di runner ini (screencap launcher maupun app solid satu warna);
+          # issuetracker 259111479: tanpa flag -gpu screenshot bekerja, dan
+          # image API lebih baru membawa stack guest yang benar.
+          DEFAULT_IMG="system-images;android-30;aosp_atd;x86_64"
+          COMBOS=(
+            "|"
+            "system-images;android-33;aosp_atd;x86_64|"
+            "system-images;android-33;aosp_atd;x86_64|-gpu swiftshader_indirect"
           )
+
+          CUR_IMAGE=""
+          ensure_image() {
+            local img="${1:-$DEFAULT_IMG}"
+            if [ "$img" != "$CUR_IMAGE" ]; then
+              sdkmanager --install "$img" > /dev/null
+              echo no | avdmanager create avd --force -n test --device pixel --package "$img"
+              test -f "$ANDROID_AVD_HOME/test.ini" || { echo "AVD tidak ditemukan untuk $img"; exit 1; }
+              CUR_IMAGE="$img"
+            fi
+          }
+
           boot_and_check() {
             local flags="$1"
             "$ANDROID_HOME/emulator/emulator" -avd test -no-window -noaudio \
@@ -77,39 +84,50 @@ jobs:
             local deadline=$((SECONDS + 420))
             while [ $SECONDS -lt $deadline ]; do
               if ! kill -0 "$EMU_PID" 2>/dev/null; then
-                echo "Emulator mati lebih awal (mode: $flags) — log:"; tail -20 /tmp/emulator.log
+                echo "Emulator mati lebih awal (mode: '$flags') — log:"; tail -20 /tmp/emulator.log
                 return 1
               fi
               local boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
               if [ "$boot" = "1" ] \
                  && adb shell service check input 2>/dev/null | tr -d '\r' | grep -q ': found' \
                  && adb shell service check settings 2>/dev/null | tr -d '\r' | grep -q ': found'; then
-                adb shell input keyevent 82 || true   # buka keyguard bila ada
-                sleep 8                               # beri waktu compositor merender
-                adb exec-out screencap -p > /tmp/boot-screen.png || true
-                local size=$(stat -c%s /tmp/boot-screen.png 2>/dev/null || echo 0)
+                adb shell input keyevent 82 || true
+                sleep 5
+                # Diagnostik komposisi (diunggah pada artifact saat gagal).
+                adb shell dumpsys SurfaceFlinger --list > /tmp/diag/sf-layers.txt 2>&1 || true
+                adb logcat -d -t 800 > /tmp/diag/logcat.txt 2>&1 || true
+                adb exec-out screencap -p > /tmp/diag/boot-screen.png || true
+                # Uji render menentukan: foreground-kan Settings (UI berwarna);
+                # kalau tangkapan tetap solid -> komposisi memang rusak.
+                adb shell am start -a android.settings.SETTINGS >/dev/null 2>&1 || true
+                sleep 6
+                adb exec-out screencap -p > /tmp/diag/settings-screen.png || true
+                local size=$(stat -c%s /tmp/diag/settings-screen.png 2>/dev/null || echo 0)
                 if [ "$size" -gt 30000 ]; then
-                  echo "Render OK (mode: $flags, boot-screen $size B) — emulator siap."
+                  echo "Render OK (image: $CUR_IMAGE, mode: '$flags', Settings $size B) — emulator siap."
                   return 0
                 fi
-                echo "Mode '$flags': layar solid/hitam ($size B) — coba mode berikutnya."
+                echo "Image=$CUR_IMAGE flags='$flags': layar Settings solid ($size B) — coba berikutnya."
                 return 1
               fi
               sleep 5
             done
-            echo "TIMEOUT boot (mode: $flags) — log:"; tail -20 /tmp/emulator.log
+            echo "TIMEOUT boot (image: $CUR_IMAGE, mode: '$flags') — log:"; tail -20 /tmp/emulator.log
             return 1
           }
 
           GPU_OK=0
-          for FLAGS in "${GPU_MODES[@]}"; do
+          for COMBO in "${COMBOS[@]}"; do
+            IMG="${COMBO%%|*}"
+            FLAGS="${COMBO#*|}"
+            ensure_image "$IMG"
             if boot_and_check "$FLAGS"; then GPU_OK=1; break; fi
             kill "$EMU_PID" 2>/dev/null || true
             wait "$EMU_PID" 2>/dev/null || true
             sleep 3
           done
           if [ "$GPU_OK" != "1" ]; then
-            echo "Semua mode GPU gagal render — log terakhir:"; tail -50 /tmp/emulator.log
+            echo "Semua kombinasi image/GPU gagal render — log terakhir:"; tail -50 /tmp/emulator.log
             exit 1
           fi
 
@@ -143,6 +161,6 @@ jobs:
           name: screenshots-debug
           path: |
             /tmp/emulator.log
-            /tmp/boot-screen.png
+            /tmp/diag/
             **/build/outputs/androidTest-results/
           retention-days: 7
