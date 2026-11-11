@@ -14,6 +14,14 @@ val releaseStorePassword: String? = System.getenv("RELEASE_STORE_PASSWORD")
 val releaseKeyAlias: String? = System.getenv("RELEASE_KEY_ALIAS")
 val releaseKeyPassword: String? = System.getenv("RELEASE_KEY_PASSWORD")
 
+// Basis versionCode semua output rilis. Skema multi-APK ala panduan resmi:
+// universal = base*1000, per-ABI = base*1000 + indeks ABI, sehingga versi baru
+// SELALU lebih tinggi dari rilis sebelumnya apa pun kombinasi APK yang dipasang
+// pengguna (v1.1.0: universal=2000, armeabi-v7a=2001, x86=2002, x86_64=2003,
+// arm64-v8a=2004 — semuanya > versionCode 1 milik v1.0.0).
+val baseVersionCode = 2
+val abiVersionCodes = mapOf("armeabi-v7a" to 1, "x86" to 2, "x86_64" to 3, "arm64-v8a" to 4)
+
 android {
     namespace = "com.myexplorer.app"
     compileSdk = 37
@@ -22,9 +30,22 @@ android {
         applicationId = "com.myexplorer.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = baseVersionCode
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // APK rilis dipecah per ABI: aplikasi membawa pustaka native (.so) untuk
+    // armeabi-v7a/arm64-v8a/x86/x86_64, jadi APK universal mengepakkan keempatnya
+    // sekaligus (23,6 MB). Split per ABI menghasilkan APK jauh lebih kecil per
+    // perangkat; APK universal tetap dihasilkan sebagai fallback penuh.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
     }
 
     signingConfigs {
@@ -60,6 +81,19 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+// AGP 9: API varian lama (applicationVariants/versionCodeOverride) sudah dihapus,
+// jadi versionCode per output diatur lewat API varian baru. Output tanpa filter
+// = APK universal; output berfilter ABI mendapat base*1000 + indeks ABI.
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters.firstOrNull()?.identifier
+            val abiIndex = abiVersionCodes[abi] ?: 0
+            output.versionCode.set(baseVersionCode * 1000 + abiIndex)
         }
     }
 }

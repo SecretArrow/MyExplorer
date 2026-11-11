@@ -101,7 +101,7 @@ Semua build dijalankan di CI — **tidak ada build lokal**. Pipeline dirancang h
 |---|---|---|
 | **CI** | push `main` / PR | 3 job paralel: lint (ktlint + Android lint), unit test semua modul, build debug APK |
 | **E2E** | push `main` / manual | Instrumented test di emulator Android 11 (API 30, image `aosp_atd`) |
-| **Release** | tag `v*` / manual | Build APK+AAB release, buat GitHub Release + changelog otomatis |
+| **Release** | tag `v*` / manual | Build APK release **signed + split per ABI** (arm64-v8a, armeabi-v7a, x86, x86_64 + universal) + AAB, verifikasi tanda tangan tiap APK, buat GitHub Release + changelog otomatis |
 | **Auto Fix** | CI gagal / manual | `ktlintFormat` otomatis, commit & push hasil perbaikan |
 
 ### Hemat waktu build
@@ -120,10 +120,15 @@ Semua build dijalankan di CI — **tidak ada build lokal**. Pipeline dirancang h
 > isi secret repo **`RELEASE_TOKEN`** dengan PAT ber-scope `repo` — job auto-tag akan
 > memakainya untuk mendorong tag. Tanpa itu, gunakan cara no.2/no.3.
 
-### Signing release (opsional)
-Set secrets repo berikut agar APK/AAB ditandatangani; tanpa itu hasilnya unsigned:
-- `RELEASE_KEYSTORE_BASE64` (base64 dari file keystore)
-- `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`
+### Signing release
+Rilis ditandatangani keystore dari `key-sign-apk.zip` (zip terenkripsi AES, ikut repo)
+yang diekstrak di CI via pyzipper. Secrets repo yang dipakai:
+- `KEY_ZIP_PASSWORD` (password zip), `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`
+- `RELEASE_TOKEN` (PAT scope `repo`) agar tag otomatis memicu workflow Release
+
+Hasil rilis: APK signed per ABI (`arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`) + APK
+`universal` + AAB. Fingerprint SHA-256 **setiap** APK dicocokkan dengan keystore oleh CI
+sebelum Release terbit, dan tag rilis dicocokkan dengan `versionName` di dalam APK.
 
 ## Menjalankan Lokal (opsional)
 

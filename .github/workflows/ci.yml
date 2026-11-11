@@ -86,17 +86,37 @@ jobs:
       # Task 15: pastikan baseline profile benar-benar terpaket. AGP TIDAK
       # memasukkan art profile ke APK debuggable, jadi verifikasi dilakukan
       # pada APK release unsigned (build tanpa env signing = unsigned).
-      - name: Verifikasi baseline profile terpaket (APK release unsigned)
+      # Splits ABI aktif → assembleRelease menghasilkan 5 APK; baseline wajib
+      # terpaket di SEMUA output (4 per-ABI + universal).
+      - name: Verifikasi baseline profile terpaket (semua APK release unsigned)
         run: |
           ./gradlew :app:assembleRelease --stacktrace
-          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
-          if unzip -l "$APK" | grep -q "assets/dexopt/baseline.prof"; then
-            echo "OK: assets/dexopt/baseline.prof ada dalam $APK"
-          else
-            echo "GAGAL: baseline.prof tidak ditemukan dalam $APK"
-            unzip -l "$APK" | grep -i "dexopt" || true
-            exit 1
-          fi
+          GAGAL=0
+          for APK in app/build/outputs/apk/release/*.apk; do
+            if unzip -l "$APK" | grep -q "assets/dexopt/baseline.prof"; then
+              echo "OK: baseline.prof ada dalam $APK"
+            else
+              echo "GAGAL: baseline.prof tidak ditemukan dalam $APK"
+              unzip -l "$APK" | grep -i "dexopt" || true
+              GAGAL=1
+            fi
+          done
+          exit $GAGAL
+
+      # Splits ABI: deteksi dini di main (sebelum workflow Release) bahwa output
+      # tepat 5 APK unsigned — armeabi-v7a, arm64-v8a, x86, x86_64 + universal.
+      - name: Pastikan split per ABI menghasilkan tepat 5 APK
+        run: |
+          ls -1 app/build/outputs/apk/release/
+          for ABI in armeabi-v7a arm64-v8a x86 x86_64 universal; do
+            if [ ! -f "app/build/outputs/apk/release/app-$ABI-release-unsigned.apk" ]; then
+              echo "::error::APK $ABI tidak ditemukan"
+              exit 1
+            fi
+          done
+          JUMLAH=$(ls app/build/outputs/apk/release/*.apk | wc -l)
+          echo "Jumlah APK release unsigned: $JUMLAH"
+          test "$JUMLAH" -eq 5
 
       - name: Upload APK debug
         uses: actions/upload-artifact@v7

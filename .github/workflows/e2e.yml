@@ -40,8 +40,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           # PENTING: runner mengeksekusi skrip PER BARIS — hindari blok multi-baris
           # (until/do/done). Setiap baris harus mandiri; retry instal via || { sleep; install; }.
+          # Splits ABI aktif → APK debug dinamai app-<abi>-debug.apk (tidak ada
+          # lagi app-debug.apk tunggal). Emulator ini x86_64 → pasang APK x86_64.
           script: |
-            adb install -g -t app/build/outputs/apk/debug/app-debug.apk || { sleep 20; adb install -g -t app/build/outputs/apk/debug/app-debug.apk; } || { sleep 20; adb install -g -t app/build/outputs/apk/debug/app-debug.apk; }
+            adb install -g -t app/build/outputs/apk/debug/app-x86_64-debug.apk || { sleep 20; adb install -g -t app/build/outputs/apk/debug/app-x86_64-debug.apk; } || { sleep 20; adb install -g -t app/build/outputs/apk/debug/app-x86_64-debug.apk; }
             adb shell appops set com.myexplorer.app MANAGE_EXTERNAL_STORAGE allow
             ./gradlew connectedDebugAndroidTest --stacktrace
 
