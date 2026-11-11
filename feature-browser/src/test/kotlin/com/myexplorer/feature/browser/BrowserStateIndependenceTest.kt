@@ -50,6 +50,7 @@ class BrowserStateIndependenceTest {
             val leftRoot = tempFolder.newFolder()
             val rightRoot = tempFolder.newFolder()
             File(leftRoot, "left-sub").mkdir()
+            File(File(leftRoot, "left-sub"), "inner.txt").writeText("x")
             File(rightRoot, "right-sub").mkdir()
             val repo = newRepo()
             val left = BrowserState(repo, leftRoot, ioDispatcher = Dispatchers.Unconfined)
@@ -58,7 +59,7 @@ class BrowserStateIndependenceTest {
             left.open(FileNode.from(File(leftRoot, "left-sub")))
 
             assertEquals(File(leftRoot, "left-sub"), left.ui.value.current)
-            assertEquals(listOf("left-sub"), left.ui.value.items.map { it.name })
+            assertEquals(listOf("inner.txt"), left.ui.value.items.map { it.name })
             assertEquals(rightRoot, right.ui.value.current)
             assertEquals(listOf("right-sub"), right.ui.value.items.map { it.name })
             Unit

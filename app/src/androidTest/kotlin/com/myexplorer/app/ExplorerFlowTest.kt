@@ -22,9 +22,11 @@ package com.myexplorer.app
 import android.os.Environment
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -33,11 +35,11 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import java.io.File
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /**
  * Uji e2e per area fitur utama: browser (buat folder lewat FAB, seleksi + hapus,
@@ -129,7 +131,7 @@ class ExplorerFlowTest {
         waitUntilDisplayed("Search")
         waitUntilDisplayed("File or folder name")
 
-        composeRule.onNodeWithText("File or folder name").performTextInput("zzznomatch")
+        composeRule.onNode(hasSetTextAction()).performTextInput("zzznomatch")
 
         // Kueri tersimpan di kolom dan layar tetap tampil (tanpa crash).
         composeRule.onNodeWithText("zzznomatch").assertIsDisplayed()
@@ -207,10 +209,8 @@ class ExplorerFlowTest {
         composeRule.onNodeWithContentDescription("New").performClick()
         composeRule.onNodeWithText("New folder").performClick()
         waitUntilDisplayed("Folder name")
-        composeRule
-            .onNodeWithText("Folder name")
-            .performTextClearance()
-            .performTextInput(name)
+        composeRule.onNode(hasSetTextAction()).performTextClearance()
+        composeRule.onNode(hasSetTextAction()).performTextInput(name)
         composeRule.onNodeWithText("Create").performClick()
 
         createdFolders.add(name)
