@@ -25,26 +25,41 @@ jobs:
       - name: Build APK & APK androidTest
         run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
 
+      # Boot emulator manual dengan gerbang kesiapan — alasan sama dengan
+      # e2e.yml (action pihak ketiga menjalankan `input keyevent 82` tanpa
+      # retry tepat setelah boot_completed; pada boot lambat layanan `input`
+      # belum terpublish dan job gagal).
+      - name: Buat & boot emulator (tunggu layanan sistem siap)
+        run: |
+          sdkmanager --install "system-images;android-30;aosp_atd;x86_64" > /dev/null
+          echo no | avdmanager create avd --force -n test \
+            --package 'system-images;android-30;aosp_atd;x86_64'
+          nohup "$ANDROID_HOME/emulator/emulator" -avd test -no-window \
+            -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot \
+            > /tmp/emulator.log 2>&1 &
+          timeout 900 bash -c '
+            adb wait-for-device
+            until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 3; done
+            echo "sys.boot_completed=1"
+            until adb shell service check input 2>/dev/null | tr -d "\r" | grep -q ": found"; do sleep 2; done
+            until adb shell service check settings 2>/dev/null | tr -d "\r" | grep -q ": found"; do sleep 2; done
+            echo "Layanan input & settings siap — emulator benar-benar siap."
+          '
+          adb shell input keyevent 82 || true   # best-effort, tidak fatal
+
+      # Tanpa instalasi manual APK — AGP/UTP yang memasang (instalasi manual
+      # konflik dengan AGP; lihat komentar di e2e.yml). Akses semua berkas
+      # diberikan dari dalam instrumentasi lewat StorageAccessRule.
+      # Test berjalan hanya ScreenshotTest (filter class) dengan argumen
+      # instrumentation screenshots=true; hasil PNG di /sdcard/MyExplorerScreenshots.
       - name: Ambil screenshot di emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          # Image yang sama dengan E2E (ATD, cepat & stabil). Tanpa instalasi
-          # manual APK — AGP/UTP yang memasang (instalasi manual konflik dengan
-          # AGP; lihat komentar di e2e.yml). Akses semua berkas diberikan dari
-          # dalam instrumentasi lewat StorageAccessRule.
-          api-level: 30
-          target: aosp_atd
-          arch: x86_64
-          disable-animations: true
-          emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          # Runner mengeksekusi skrip per baris — setiap baris harus mandiri.
-          # Test berjalan hanya ScreenshotTest (filter class) dengan argumen
-          # instrumentation screenshots=true; hasil PNG di /sdcard/MyExplorerScreenshots.
-          script: |
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.myexplorer.app.ScreenshotTest -Pandroid.testInstrumentationRunnerArguments.screenshots=true --stacktrace
-            adb pull /sdcard/MyExplorerScreenshots ./screenshots
-            test "$(find screenshots -name '*.png' | wc -l)" -ge 12
+        run: |
+          ./gradlew connectedDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=com.myexplorer.app.ScreenshotTest \
+            -Pandroid.testInstrumentationRunnerArguments.screenshots=true \
+            --stacktrace
+          adb pull /sdcard/MyExplorerScreenshots ./screenshots
+          test "$(find screenshots -name '*.png' | wc -l)" -ge 12
 
       - name: Upload tangkapan layar (artifact)
         if: always()
@@ -52,4 +67,14 @@ jobs:
         with:
           name: app-screenshots
           path: screenshots/
+          retention-days: 7
+
+      - name: Upload log & laporan (saat gagal)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-debug
+          path: |
+            /tmp/emulator.log
+            **/build/outputs/androidTest-results/
           retention-days: 7
