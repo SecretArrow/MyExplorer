@@ -59,9 +59,17 @@ class BrowserStateIndependenceTest {
             left.open(FileNode.from(File(leftRoot, "left-sub")))
 
             assertEquals(File(leftRoot, "left-sub"), left.ui.value.current)
-            assertEquals(listOf("inner.txt"), left.ui.value.items.map { it.name })
+            assertEquals(
+                listOf("inner.txt"),
+                left.ui.value.items
+                    .map { it.name },
+            )
             assertEquals(rightRoot, right.ui.value.current)
-            assertEquals(listOf("right-sub"), right.ui.value.items.map { it.name })
+            assertEquals(
+                listOf("right-sub"),
+                right.ui.value.items
+                    .map { it.name },
+            )
             Unit
         }
 
@@ -77,9 +85,17 @@ class BrowserStateIndependenceTest {
 
             left.createFolder("left-new")
 
-            assertEquals(listOf("left-new"), left.ui.value.items.map { it.name })
+            assertEquals(
+                listOf("left-new"),
+                left.ui.value.items
+                    .map { it.name },
+            )
             assertEquals(rightRoot, right.ui.value.current)
-            assertEquals(listOf("right-sub"), right.ui.value.items.map { it.name })
+            assertEquals(
+                listOf("right-sub"),
+                right.ui.value.items
+                    .map { it.name },
+            )
             Unit
         }
 }
