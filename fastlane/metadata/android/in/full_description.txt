@@ -1,0 +1,30 @@
+My Explorer adalah file manager Android modern — cepat, privat, dan 100% perangkat lunak bebas dengan lisensi GPL-3.0-only. Tanpa iklan, tanpa pelacakan, tanpa analytics, dan tanpa dependensi proprietary: berkas Anda tidak pernah keluar dari perangkat.
+
+KELOLA BERKAS
+• Jelajahi penyimpanan internal — folder di atas, urut A–Z
+• Seleksi ganda; salin, pindah, ganti nama, dan hapus dengan resolusi konflik nama (timpa / ganti nama / lewati)
+• Recycle bin ber-metadata yang bisa dipulihkan
+• Buat folder dan buka berkas apa pun dengan aplikasi favorit Anda lewat FileProvider
+
+ALAT
+• Buat dan ekstrak arsip ZIP, termasuk arsip berpassword AES-256
+• Vault terenkripsi: kunci berkas dengan AES-256-GCM, kunci dilindungi Android Keystore
+• Analisis penyimpanan untuk melihat apa yang memakan ruang
+• Manajer aplikasi dengan backup APK
+• Pencarian berkas berbasis indeks dengan filter kategori, ukuran, dan tanggal
+
+JARINGAN & CLOUD
+• Kelola koneksi SMB, FTP, SFTP, dan WebDAV dengan kredensial terenkripsi
+• Dukungan Nextcloud lewat Login flow v2 resmi
+• Server FTP bawaan untuk transfer berkas dengan PC (wajib autentikasi, mati otomatis)
+• Sinkronisasi folder satu arah (push/pull), terjadwal berkala atau dijalankan manual
+
+LAINNYA
+• Pemutar media (audio/video), penampil gambar, dan editor teks
+• Kunci aplikasi biometrik (sidik jari / wajah / kredensial perangkat)
+• Material 3 dengan dynamic color, tema terang dan gelap
+• Widget akses cepat di layar depan untuk folder favorit
+• Dukungan TV dan layar besar
+• Bahasa: Inggris dan Bahasa Indonesia
+
+My Explorer adalah perangkat lunak bebas berlisensi GPL-3.0-only. Kode sumber: https://github.com/SecretArrow/MyExplorer

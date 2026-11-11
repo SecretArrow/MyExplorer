@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  My Explorer - a free and open source file manager for Android.
+  Copyright (C) 2025-2026 My Explorer contributors
+
+  SPDX-License-Identifier: GPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<resources>
+    <string name="app_name">My Explorer</string>
+
+    <string name="app_tab_files">Berkas</string>
+    <string name="app_tab_apps">Aplikasi</string>
+    <string name="app_tab_storage">Penyimpanan</string>
+    <string name="app_tab_network">Jaringan</string>
+    <string name="app_tab_settings">Pengaturan</string>
+    <string name="app_network_section_server">Server FTP</string>
+    <string name="app_network_section_locations">Lokasi Jaringan</string>
+    <string name="app_network_section_sync">Sinkronisasi</string>
+    <string name="app_storage_section_analyzer">Analisis</string>
+    <string name="app_storage_section_vault">Vault</string>
+    <string name="app_zip_created">Arsip dibuat: %1$s</string>
+    <string name="app_zip_failed">Gagal membuat arsip ZIP</string>
+    <string name="app_zip_encrypted_created">Arsip terenkripsi dibuat: %1$s</string>
+    <string name="app_zip_dialog_title">Buat arsip ZIP</string>
+    <string name="app_zip_password_hint">Kata sandi (opsional, AES-256)</string>
+    <string name="app_zip_action_encrypted">Buat terenkripsi</string>
+    <string name="app_zip_action_plain">Buat tanpa sandi</string>
+    <string name="app_action_cancel">Batal</string>
+    <string name="app_extract_dialog_title">Ekstrak %1$s</string>
+    <string name="app_extract_password_hint">Kata sandi (opsional)</string>
+    <string name="app_extract_action_plain">Ekstrak</string>
+    <string name="app_extract_action_encrypted">Ekstrak dgn sandi</string>
+    <string name="app_extract_open">Buka dengan…</string>
+    <string name="app_extract_success">%1$d entri diekstrak ke %2$s</string>
+    <string name="app_extract_failed">Gagal mengekstrak arsip</string>
+    <string name="app_extract_wrong_password">Sandi salah atau entri arsip tidak aman</string>
+    <string name="app_extract_target_exists">Folder tujuan sudah ada: %1$s</string>
+    <string name="app_default_archive_name">arsip</string>
+    <string name="app_search_result_missing">Berkas sudah tidak ada</string>
+    <string name="widget_quick_access_label">Akses cepat</string>
+    <string name="widget_quick_access_desc">Buka folder tersemat dari layar utama</string>
+    <string name="widget_quick_access_empty">Sematkan folder dari penjelajah berkas untuk melihatnya di sini</string>
+    <string name="app_widget_folder_missing">Folder tidak tersedia lagi</string>
+</resources>

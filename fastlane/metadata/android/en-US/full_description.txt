@@ -1,0 +1,30 @@
+My Explorer is a modern file manager for Android — fast, private, and 100% free and open source under GPL-3.0-only. No ads, no tracking, no analytics, and no proprietary dependencies: your files never leave your device.
+
+FILE MANAGEMENT
+• Browse internal storage with folder-first navigation and A–Z sorting
+• Multi-select; copy, move, rename, and delete with name-conflict resolution (overwrite / rename / skip)
+• Recoverable, metadata-based recycle bin
+• Create folders and open any file with your favorite apps via FileProvider
+
+TOOLS
+• Create and extract ZIP archives, including password-protected AES-256
+• Encrypted vault: lock files with AES-256-GCM, keys protected by Android Keystore
+• Storage analyzer to see what is using your space
+• App manager with APK backup
+• Indexed file search with filters by category, size, and date
+
+NETWORK & CLOUD
+• Browse and manage SMB, FTP, SFTP, and WebDAV connections with encrypted credentials
+• Nextcloud support via the official Login flow v2
+• Built-in FTP server to transfer files with your PC (authentication required, auto-off)
+• One-way folder synchronization (push/pull), scheduled periodically or run manually
+
+MORE
+• Media player (audio/video), image viewer, and text editor
+• Biometric app lock (fingerprint / face / device credential)
+• Material 3 with dynamic color, light and dark theme
+• Quick access home-screen widget for favorite folders
+• TV and large-screen support
+• Languages: English and Bahasa Indonesia
+
+My Explorer is free software under GPL-3.0-only. Source code: https://github.com/SecretArrow/MyExplorer

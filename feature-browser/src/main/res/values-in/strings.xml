@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  My Explorer - a free and open source file manager for Android.
+  Copyright (C) 2025-2026 My Explorer contributors
+
+  SPDX-License-Identifier: GPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<resources>
+    <string name="browser_title">My Explorer</string>
+    <string name="browser_cd_up">Naik</string>
+    <string name="browser_cd_paste">Tempel</string>
+    <string name="browser_cd_selection_mode">Mode seleksi</string>
+    <string name="browser_new_folder">Folder baru</string>
+    <string name="browser_cd_refresh">Segarkan</string>
+    <string name="browser_empty_folder">Folder kosong</string>
+    <string name="browser_folder_name_label">Nama folder</string>
+    <string name="browser_create">Buat</string>
+    <string name="browser_cancel">Batal</string>
+    <string name="browser_storage_access_message">Berikan akses semua berkas agar file manager bekerja penuh.</string>
+    <string name="browser_allow">Izinkan</string>
+    <string name="browser_cd_delete">Hapus</string>
+    <string name="browser_cd_copy">Salin</string>
+    <string name="browser_cd_cut">Potong</string>
+    <string name="browser_cd_zip">Kompres ZIP</string>
+    <string name="browser_error_read_folder">Tidak dapat membaca folder</string>
+
+    <plurals name="browser_selected_count">
+        <item quantity="one">%1$d dipilih</item>
+        <item quantity="other">%1$d dipilih</item>
+    </plurals>
+
+    <string name="search_title">Pencarian</string>
+    <string name="search_cd_back">Kembali</string>
+    <string name="search_cd_search">Cari</string>
+    <string name="search_cd_rebuild">Bangun ulang indeks</string>
+    <string name="search_query_hint">Nama berkas atau folder</string>
+    <string name="search_indexing">Membangun indeks…</string>
+    <string name="search_index_count">Indeks: %1$d entri</string>
+    <string name="search_index_skipped">Dilewati: %1$d</string>
+    <string name="search_index_truncated">Indeks tidak lengkap (batas tercapai)</string>
+    <string name="search_rebuild">Bangun ulang</string>
+    <string name="search_error_empty">Indeks kosong. Bangun indeks dulu.</string>
+    <string name="search_error_index">Gagal membangun indeks.</string>
+    <string name="search_error_load">Gagal memuat indeks tersimpan.</string>
+    <string name="search_retry">Coba lagi</string>
+    <string name="search_no_results">Tidak ada hasil</string>
+    <string name="search_results_summary">Ditemukan %1$d kecocokan</string>
+    <string name="search_results_truncated">Ditemukan %1$d kecocokan (menampilkan %2$d pertama)</string>
+    <string name="search_cat_folder">Folder</string>
+    <string name="search_cat_image">Gambar</string>
+    <string name="search_cat_video">Video</string>
+    <string name="search_cat_audio">Audio</string>
+    <string name="search_cat_document">Dokumen</string>
+    <string name="search_cat_archive">Arsip</string>
+    <string name="search_cat_apk">APK</string>
+    <string name="search_cat_other">Lainnya</string>
+    <string name="browser_cd_search">Cari</string>
+    <string name="browser_cd_favorite">Tambahkan ke akses cepat</string>
+    <string name="browser_cd_unfavorite">Hapus dari akses cepat</string>
+</resources>

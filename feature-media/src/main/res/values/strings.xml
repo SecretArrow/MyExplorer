@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  My Explorer - a free and open source file manager for Android.
+  Copyright (C) 2025-2026 My Explorer contributors
+
+  SPDX-License-Identifier: GPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<resources>
+    <string name="media_cd_close">Close</string>
+    <string name="media_error_load_image">Cannot load image</string>
+    <string name="media_modified">Modified</string>
+    <string name="media_cd_save">Save</string>
+    <string name="media_error_open_text">Cannot open text file</string>
+    <string name="media_truncated_warning">File is too large — only the first 1 MB was loaded. Saving will overwrite the part that was not loaded.</string>
+    <string name="media_discard_title">Discard changes?</string>
+    <string name="media_discard_message">You have unsaved changes. Discard?</string>
+    <string name="media_discard_confirm">Discard</string>
+    <string name="media_cancel">Cancel</string>
+    <string name="player_error_missing">File cannot be played because it is missing</string>
+    <string name="player_error_generic">Playback failed</string>
+    <string name="player_close">Close</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_buffering">Buffering…</string>
+</resources>

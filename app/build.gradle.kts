@@ -1,0 +1,108 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
+}
+
+// Signing release dari environment (diisi oleh workflow release via secrets).
+// Jika env tidak ada, build release menghasilkan APK/AAB unsigned.
+val releaseStoreFile: String? = System.getenv("RELEASE_STORE_FILE")
+val releaseStorePassword: String? = System.getenv("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias: String? = System.getenv("RELEASE_KEY_ALIAS")
+val releaseKeyPassword: String? = System.getenv("RELEASE_KEY_PASSWORD")
+
+android {
+    namespace = "com.myexplorer.app"
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "com.myexplorer.app"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (releaseStoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+// Kotlin 2.4: android.kotlinOptions deprecated-with-error -> DSL kotlin.compilerOptions.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    implementation(project(":core-model"))
+    implementation(project(":core-common"))
+    implementation(project(":core-ui"))
+    implementation(project(":data-local"))
+    implementation(project(":feature-browser"))
+    implementation(project(":feature-tools"))
+    implementation(project(":feature-media"))
+    implementation(project(":feature-transfer"))
+    implementation(project(":feature-network"))
+    implementation(project(":feature-sync"))
+    implementation(project(":feature-apps"))
+    implementation(project(":feature-settings"))
+    // MainActivity memakai BiometricManager/BiometricPrompt.Authenticators langsung.
+    implementation(libs.androidx.biometric)
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    // Widget "Akses cepat" (Glance AppWidget).
+    implementation(libs.androidx.glance.appwidget)
+    // Instalasi baseline profile (cold-start lebih cepat) — aturan di src/main/baseline-prof.txt.
+    implementation(libs.androidx.profileinstaller)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+}

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  My Explorer - a free and open source file manager for Android.
+  Copyright (C) 2025-2026 My Explorer contributors
+
+  SPDX-License-Identifier: GPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<resources>
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_section_theme">Tema</string>
+    <string name="settings_theme_system">Ikuti sistem</string>
+    <string name="settings_theme_light">Terang</string>
+    <string name="settings_theme_dark">Gelap</string>
+    <string name="settings_section_language">Bahasa</string>
+    <string name="settings_language_system">Sistem</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_indonesian">Indonesia</string>
+    <string name="settings_section_about">Tentang</string>
+    <string name="settings_about_name_version">My Explorer %1$s</string>
+    <string name="settings_about_tagline" formatted="false">Pengelola berkas 100% perangkat lunak bebas.</string>
+    <string name="settings_about_license">Lisensi: GNU GPL v3 — tanpa iklan, tanpa pelacakan, tanpa layanan berpemilik.</string>
+    <string name="settings_about_read_license">Baca lisensi (gnu.org)</string>
+    <string name="settings_section_privacy">Privasi</string>
+    <string name="settings_privacy_description">Aplikasi ini tidak mengumpulkan data apa pun. Semua proses berjalan di perangkat.</string>
+    <string name="settings_section_security">Keamanan</string>
+    <string name="settings_app_lock">Kunci aplikasi</string>
+    <string name="settings_app_lock_description">Minta biometrik atau kredensial perangkat saat membuka atau kembali ke aplikasi.</string>
+    <string name="lock_title">My Explorer terkunci</string>
+    <string name="lock_subtitle">Buka kunci untuk melanjutkan</string>
+    <string name="lock_button">Buka kunci</string>
+    <string name="lock_button_disable">Matikan kunci aplikasi</string>
+    <string name="lock_no_authenticator">Tidak ada sidik jari/wajah/PIN terdaftar di perangkat ini.</string>
+    <string name="lock_no_activity">Tidak dapat menampilkan dialog buka kunci dari layar ini.</string>
+    <string name="lock_failed">Tidak dikenali. Coba lagi.</string>
+    <string name="lock_error_generic">Gagal membuka kunci (kode %1$d).</string>
+    <string name="lock_error_lockout">Terlalu banyak percobaan. Tunggu sebentar.</string>
+</resources>

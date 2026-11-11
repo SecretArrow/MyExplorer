@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  My Explorer - a free and open source file manager for Android.
+  Copyright (C) 2025-2026 My Explorer contributors
+
+  SPDX-License-Identifier: GPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<resources>
+    <string name="apps_title">Apps</string>
+    <string name="apps_cd_refresh">Refresh</string>
+    <string name="apps_empty">No apps</string>
+    <string name="apps_error_launch">Cannot open app</string>
+    <string name="apps_backup_success">APK backed up to %1$s</string>
+    <string name="apps_backup_failed">Failed to back up APK</string>
+    <string name="apps_badge_system">System</string>
+    <string name="apps_cd_backup">Back up APK</string>
+    <string name="apps_cd_uninstall">Uninstall app</string>
+    <string name="apps_error_load_list">Cannot load app list</string>
+</resources>
